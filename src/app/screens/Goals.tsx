@@ -184,7 +184,7 @@ export function Goals() {
                         onClick={() => { setSelectedGoalId(goal.id); setAllocateAmount(""); }}
                         className="w-full py-2.5 rounded-xl bg-secondary text-secondary-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors"
                       >
-                        Allocate Cash
+                        Add Money to Goal
                       </button>
                     )
                   ) : (

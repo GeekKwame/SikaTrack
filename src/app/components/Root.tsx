@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate, Navigate } from "react-router";
-import { Home, Plus, TrendingUp, Target, User, Sparkles } from "lucide-react";
+import { Home, Plus, TrendingUp, Target, User, Sparkles, Activity } from "lucide-react";
 import { TransactionProvider } from "../context/TransactionContext";
 import { ThemeProvider } from "../context/ThemeContext";
 import { BudgetProvider } from "../context/BudgetContext";
@@ -13,8 +13,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground text-sm">Loading…</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-5">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          <span className="text-white font-extrabold text-3xl">₵</span>
+        </div>
+        <p className="text-sm font-semibold text-muted-foreground">SikaTrack</p>
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -28,17 +35,20 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const mobileNav = [
+  { path: "/",        Icon: Home,     label: "Home",    isAdd: false },
+  { path: "/history", Icon: TrendingUp, label: "History", isAdd: false },
+  { path: "/add",     Icon: Plus,     label: "Add",     isAdd: true  },
+  { path: "/budget",  Icon: Target,   label: "Budget",  isAdd: false },
+  { path: "/goals",   Icon: Activity, label: "Goals",   isAdd: false },
+  { path: "/profile", Icon: User,     label: "Profile", isAdd: false },
+];
+
+const desktopNav = mobileNav.filter((i) => !i.isAdd);
+
 export function Root() {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const navItems = [
-    { path: "/", icon: Home, label: "Home" },
-    { path: "/goals", icon: Target, label: "Goals" },
-    { path: "/add", icon: Plus, label: "Add", isAdd: true },
-    { path: "/insights", icon: TrendingUp, label: "Insights" },
-    { path: "/profile", icon: User, label: "Profile" },
-  ];
 
   return (
     <ThemeProvider>
@@ -47,6 +57,7 @@ export function Root() {
           <BudgetProvider>
             <GoalsProvider>
               <div className="min-h-screen bg-background relative">
+                {/* Desktop header */}
                 <header className="hidden md:block sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur">
                   <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
                     <button
@@ -57,27 +68,24 @@ export function Root() {
                       SikaTrack
                     </button>
                     <div className="flex items-center gap-2">
-                      {navItems
-                        .filter((item) => !item.isAdd)
-                        .map((item) => {
-                          const Icon = item.icon;
-                          const isActive = location.pathname === item.path;
-                          return (
-                            <button
-                              key={item.path}
-                              type="button"
-                              onClick={() => navigate(item.path)}
-                              className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                                isActive
-                                  ? "bg-primary/10 text-primary"
-                                  : "text-muted-foreground hover:bg-muted"
-                              }`}
-                            >
-                              <Icon size={16} />
-                              {item.label}
-                            </button>
-                          );
-                        })}
+                      {desktopNav.map(({ path, Icon, label }) => {
+                        const isActive = location.pathname === path;
+                        return (
+                          <button
+                            key={path}
+                            type="button"
+                            onClick={() => navigate(path)}
+                            className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                              isActive
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:bg-muted"
+                            }`}
+                          >
+                            <Icon size={16} />
+                            {label}
+                          </button>
+                        );
+                      })}
                       <button
                         type="button"
                         onClick={() => navigate("/add")}
@@ -97,69 +105,67 @@ export function Root() {
                   </div>
                 </main>
 
+                {/* Ask Sika floating button */}
                 {location.pathname !== "/ask" && location.pathname !== "/add" && (
                   <button
                     type="button"
                     onClick={() => navigate("/ask")}
-                    className="fixed bottom-24 right-5 md:bottom-6 md:right-8 p-4 rounded-full shadow-2xl transition-transform active:scale-95 flex items-center justify-center animate-bounce-slow"
+                    className="fixed bottom-24 right-5 md:bottom-6 md:right-8 p-4 rounded-full shadow-2xl transition-transform active:scale-95 flex items-center justify-center"
                     style={{
                       background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                       boxShadow: "0 8px 30px rgba(16, 185, 129, 0.4)",
                     }}
+                    aria-label="Ask Sika AI"
                   >
                     <Sparkles size={24} className="text-white" />
                   </button>
                 )}
 
+                {/* Mobile bottom nav — 6 items */}
                 <nav
                   className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border safe-bottom"
                   style={{ boxShadow: "0 -4px 20px rgba(0,0,0,0.08)" }}
                 >
-                  <div className="flex items-end justify-around px-2 pt-3 pb-4">
-                    {navItems.map((item) => {
-                      const Icon = item.icon;
-                      const isActive = location.pathname === item.path;
+                  <div className="flex items-end justify-around px-1 pt-2 pb-4">
+                    {mobileNav.map(({ path, Icon, label, isAdd }) => {
+                      const isActive = location.pathname === path;
 
-                      if (item.isAdd) {
+                      if (isAdd) {
                         return (
                           <button
-                            key={item.path}
+                            key={path}
                             type="button"
-                            onClick={() => navigate(item.path)}
-                            className="flex flex-col items-center -mt-6"
+                            onClick={() => navigate(path)}
+                            className="flex flex-col items-center -mt-5"
                             aria-label="Add transaction"
                           >
                             <div
-                              className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-95"
+                              className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-95"
                               style={{ background: "var(--gradient-primary)" }}
                             >
-                              <Icon size={26} className="text-white" />
+                              <Icon size={22} className="text-white" />
                             </div>
-                            <span className="text-xs font-medium mt-1 text-muted-foreground">Add</span>
+                            <span className="text-[10px] font-medium mt-1 text-muted-foreground">Add</span>
                           </button>
                         );
                       }
 
                       return (
                         <button
-                          key={item.path}
+                          key={path}
                           type="button"
-                          onClick={() => navigate(item.path)}
-                          className="flex flex-col items-center gap-1 min-w-12 transition-all active:scale-95"
+                          onClick={() => navigate(path)}
+                          className="flex flex-col items-center gap-0.5 min-w-10 transition-all active:scale-95"
                         >
-                          <div className={`p-2 rounded-xl transition-all ${isActive ? "bg-primary/10" : ""}`}>
+                          <div className={`p-1.5 rounded-xl transition-all ${isActive ? "bg-primary/10" : ""}`}>
                             <Icon
-                              size={22}
+                              size={20}
                               className={isActive ? "text-primary" : "text-muted-foreground"}
                               strokeWidth={isActive ? 2.5 : 2}
                             />
                           </div>
-                          <span
-                            className={`text-xs font-medium ${
-                              isActive ? "text-primary" : "text-muted-foreground"
-                            }`}
-                          >
-                            {item.label}
+                          <span className={`text-[10px] font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                            {label}
                           </span>
                         </button>
                       );

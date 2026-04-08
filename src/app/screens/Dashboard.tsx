@@ -5,9 +5,9 @@ import { useTransactions, Category } from "../context/TransactionContext";
 import { useBudgets } from "../context/BudgetContext";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
-import { Moon, Sun, ArrowUpRight, ArrowDownRight, Plus, ChevronRight, AlertTriangle } from "lucide-react";
+import { Moon, Sun, ArrowUpRight, ArrowDownRight, Plus, ChevronRight, AlertTriangle, Target, AlertCircle, Cloud, Smartphone, X } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { CategoryIcon, CATEGORY_HEX, CATEGORY_EMOJI } from "../components/CategoryIcon";
+import { CATEGORY_HEX, CATEGORY_EMOJI } from "../components/CategoryIcon";
 
 function formatGHS(amount: number) {
   return amount.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -29,9 +29,20 @@ export function Dashboard() {
   const { transactions, dataReady, balance, monthlySpending, totalIncome, totalExpenses } = useTransactions();
   const { budgets } = useBudgets();
   const { theme, toggleTheme } = useTheme();
-  const { user: authUser } = useAuth();
+  const { user: authUser, mode } = useAuth();
   const navigate = useNavigate();
   const [showOpeningPrompt, setShowOpeningPrompt] = useState(false);
+  const [showModeHint, setShowModeHint] = useState(() => {
+    // Show once per browser session
+    const key = "sikatrack_mode_hint_dismissed";
+    if (sessionStorage.getItem(key)) return false;
+    return true;
+  });
+
+  const dismissModeHint = () => {
+    sessionStorage.setItem("sikatrack_mode_hint_dismissed", "1");
+    setShowModeHint(false);
+  };
 
   const displayName = authUser?.displayName ?? "Friend";
 
@@ -73,6 +84,8 @@ export function Dashboard() {
     return { ...b, spent, pct };
   }).filter((b) => b.pct >= 80);
 
+  const isNegativeBalance = balance < 0;
+
   return (
     <div className="flex flex-col gap-5 pb-4">
       {showOpeningPrompt && (
@@ -80,7 +93,7 @@ export function Dashboard() {
           <div className="w-full max-w-md rounded-2xl bg-card border border-border p-5 shadow-2xl">
             <h3 className="text-lg font-bold mb-1">Set Your Opening Balance</h3>
             <p className="text-sm text-muted-foreground mb-5">
-              Start with your current wallet/account amount so your balance reflects real money from day one.
+              Start with your current MoMo/bank wallet amount so your balance shows real money from day one.
             </p>
             <div className="flex gap-3">
               <button
@@ -133,8 +146,8 @@ export function Dashboard() {
         {/* Balance Card */}
         <div className="bg-white/15 rounded-2xl p-5 backdrop-blur-sm">
           <p className="text-white/80 text-xs font-medium uppercase tracking-widest mb-1">Total Balance</p>
-          <h2 className="text-4xl font-extrabold text-white mb-4">
-            ₵{formatGHS(balance)}
+          <h2 className={`text-4xl font-extrabold mb-4 ${isNegativeBalance ? "text-red-200" : "text-white"}`}>
+            {isNegativeBalance ? "-" : ""}₵{formatGHS(Math.abs(balance))}
           </h2>
           <div className="flex gap-4">
             <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 flex-1">
@@ -154,6 +167,51 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Mode Hint Banner */}
+      {showModeHint && (
+        <div className="px-5">
+          <div className="flex items-start gap-3 p-3.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-2xl relative">
+            <button onClick={dismissModeHint} className="absolute right-2 top-2 p-1 text-blue-400 hover:text-blue-600">
+              <X size={16} />
+            </button>
+            <div className="mt-0.5 rounded-full bg-blue-100 dark:bg-blue-900 p-1.5 text-blue-600 dark:text-blue-400">
+              {mode === "cloud" ? <Cloud size={16} /> : <Smartphone size={16} />}
+            </div>
+            <div className="pr-4">
+              <p className="font-semibold text-sm text-blue-900 dark:text-blue-100">
+                {mode === "cloud" ? "Cloud Sync Active ☁️" : "Offline Mode 📱"}
+              </p>
+              <p className="text-xs text-blue-800/80 dark:text-blue-200/80 mt-0.5 leading-relaxed">
+                {mode === "cloud"
+                  ? "Your data is safely backed up to the cloud and synced across devices."
+                  : "Your data is stored securely on this device only. Set up Supabase to enable cloud sync."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Negative balance warning */}
+      {isNegativeBalance && (
+        <div className="px-5">
+          <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-2xl">
+            <AlertCircle size={20} className="text-destructive flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-destructive">Your balance is negative</p>
+              <p className="text-xs text-destructive/80 mt-0.5">
+                You've spent more than you've recorded as income. Add your MoMo income or opening balance.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/add?type=income")}
+              className="flex-shrink-0 text-xs font-semibold text-white bg-destructive px-3 py-1.5 rounded-lg"
+            >
+              Fix
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Monthly Summary */}
       <div className="px-5">
@@ -234,24 +292,34 @@ export function Dashboard() {
 
       {/* Quick Actions */}
       <div className="px-5">
-        <div className="grid grid-cols-2 gap-3">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Quick Actions</p>
+        <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => navigate("/add")}
-            className="flex items-center gap-3 p-4 bg-primary/10 border border-primary/20 rounded-2xl hover:bg-primary/15 transition-colors active:scale-[0.98]"
+            className="flex flex-col items-center gap-2 p-4 bg-primary/10 border border-primary/20 rounded-2xl hover:bg-primary/15 transition-colors active:scale-[0.98]"
           >
             <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
               <Plus size={18} className="text-white" />
             </div>
-            <span className="font-semibold text-sm text-primary">Add Expense</span>
+            <span className="font-semibold text-xs text-primary text-center">Add Expense</span>
           </button>
           <button
-            onClick={() => navigate("/add")}
-            className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 dark:bg-green-900/10 dark:border-green-900/30 rounded-2xl hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors active:scale-[0.98]"
+            onClick={() => navigate("/add?type=income")}
+            className="flex flex-col items-center gap-2 p-4 bg-green-50 border border-green-200 dark:bg-green-900/10 dark:border-green-900/30 rounded-2xl hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors active:scale-[0.98]"
           >
             <div className="w-9 h-9 rounded-xl bg-green-500 flex items-center justify-center">
               <ArrowUpRight size={18} className="text-white" />
             </div>
-            <span className="font-semibold text-sm text-green-700 dark:text-green-400">Add Income</span>
+            <span className="font-semibold text-xs text-green-700 dark:text-green-400 text-center">Add Income</span>
+          </button>
+          <button
+            onClick={() => navigate("/budget")}
+            className="flex flex-col items-center gap-2 p-4 bg-purple-50 border border-purple-200 dark:bg-purple-900/10 dark:border-purple-900/30 rounded-2xl hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors active:scale-[0.98]"
+          >
+            <div className="w-9 h-9 rounded-xl bg-purple-500 flex items-center justify-center">
+              <Target size={18} className="text-white" />
+            </div>
+            <span className="font-semibold text-xs text-purple-700 dark:text-purple-400 text-center">Set Budget</span>
           </button>
         </div>
       </div>
@@ -301,12 +369,12 @@ export function Dashboard() {
       {/* Empty state */}
       {transactions.length === 0 && (
         <div className="px-5 py-8 text-center">
-          <div className="text-5xl mb-3">₵</div>
-          <h3 className="text-lg font-bold mb-1">Start From Real Numbers</h3>
-          <p className="text-sm text-muted-foreground mb-5">
-            Add your opening balance first, then track real expenses and income.
+          <div className="text-6xl mb-4">📱</div>
+          <h3 className="text-lg font-bold mb-2">Track Your MoMo Money</h3>
+          <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
+            Start by adding your current MoMo balance, then record every payment you send or receive.
           </p>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             <button
               onClick={() => navigate("/add?type=income")}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold bg-green-600 hover:bg-green-700"

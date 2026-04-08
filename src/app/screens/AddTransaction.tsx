@@ -1,13 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTransactions, Category } from "../context/TransactionContext";
-import { CategoryIcon, CATEGORY_COLORS, CATEGORY_EMOJI } from "../components/CategoryIcon";
+import { CATEGORY_COLORS, CATEGORY_EMOJI } from "../components/CategoryIcon";
 import { ArrowLeft, MessageSquarePlus } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { parseMoMoSms } from "../utils/SmsParserUtils";
 
-const CATEGORIES: Category[] = ["Food", "Transport", "Bills", "Entertainment", "MoMo Transfer", "Savings", "Other"];
+// Expense categories
+const EXPENSE_CATEGORIES: Category[] = ["Food", "Transport", "Bills", "Entertainment", "MoMo Transfer", "Savings", "Other"];
+
+// Income categories — shown when type = income
+const INCOME_CATEGORIES: Category[] = ["MoMo Transfer", "Savings", "Other"];
+// We represent income-specific labels using a separate map
+const INCOME_LABELS: Record<string, string> = {
+  "MoMo Transfer": "MoMo Received",
+  "Savings":       "Business",
+  "Other":         "Other",
+};
+
+// Extended income display with friendly names
+const INCOME_DISPLAY: { category: Category; label: string; emoji: string }[] = [
+  { category: "MoMo Transfer", label: "MoMo Received", emoji: "📲" },
+  { category: "Savings",       label: "Savings",        emoji: "💰" },
+  { category: "Bills",         label: "Salary",         emoji: "💼" },
+  { category: "Transport",     label: "Business",       emoji: "🏪" },
+  { category: "Entertainment", label: "Gift",           emoji: "🎁" },
+  { category: "Other",         label: "Other",          emoji: "📌" },
+];
+
+// Expense display with originals
+const EXPENSE_DISPLAY: { category: Category; label: string; emoji: string }[] = [
+  { category: "Food",          label: "Food",           emoji: CATEGORY_EMOJI["Food"] },
+  { category: "Transport",     label: "Transport",      emoji: CATEGORY_EMOJI["Transport"] },
+  { category: "Bills",         label: "Bills",          emoji: CATEGORY_EMOJI["Bills"] },
+  { category: "Entertainment", label: "Entertainment",  emoji: CATEGORY_EMOJI["Entertainment"] },
+  { category: "MoMo Transfer", label: "MoMo Transfer",  emoji: CATEGORY_EMOJI["MoMo Transfer"] },
+  { category: "Savings",       label: "Savings",        emoji: CATEGORY_EMOJI["Savings"] },
+  { category: "Other",         label: "Other",          emoji: CATEGORY_EMOJI["Other"] },
+];
 
 function formatGHS(amount: number) {
   return amount.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -18,14 +49,24 @@ export function AddTransaction() {
   const [searchParams] = useSearchParams();
   const { addTransaction } = useTransactions();
 
+  const initialType = searchParams.get("type") === "income" ? "income" : "expense";
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<Category>("Food");
+  const [type, setType] = useState<"expense" | "income">(initialType);
+  const [category, setCategory] = useState<Category>(initialType === "income" ? "MoMo Transfer" : "Food");
   const [notes, setNotes] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const initialType = searchParams.get("type") === "income" ? "income" : "expense";
-  const [type, setType] = useState<"expense" | "income">(initialType);
+
+  // When type changes, reset category to appropriate default
+  useEffect(() => {
+    if (type === "income") {
+      setCategory("MoMo Transfer");
+    } else {
+      setCategory("Food");
+    }
+  }, [type]);
 
   const displayAmount = amount ? `₵${formatGHS(parseFloat(amount) || 0)}` : "₵0.00";
+  const currentDisplay = type === "income" ? INCOME_DISPLAY : EXPENSE_DISPLAY;
 
   const handleSmsPaste = async () => {
     try {
@@ -36,12 +77,12 @@ export function AddTransaction() {
         setType(parsed.type);
         setCategory(parsed.category);
         setNotes(parsed.notes);
-        toast.success("SMS parsed successfully! Verify details below.");
+        toast.success("MoMo SMS read! Please check the details below.");
       } else {
-        toast.error("Could not find a valid transaction in clipboard text.");
+        toast.error("Could not find a valid MoMo transaction in your clipboard.");
       }
     } catch {
-      toast.error("Clipboard permission denied or empty.");
+      toast.error("Could not read clipboard. Please allow clipboard access.");
     }
   };
 
@@ -70,9 +111,10 @@ export function AddTransaction() {
 
     addTransaction({ amount: amountNum, category, notes, date, type });
 
-    if (type === "expense") {
+    // 🎉 Confetti for income (earning money is worth celebrating!)
+    if (type === "income") {
       confetti({
-        particleCount: 60,
+        particleCount: 80,
         spread: 70,
         origin: { y: 0.6 },
         colors: ["#16a34a", "#22c55e", "#86efac", "#ffffff"],
@@ -147,24 +189,26 @@ export function AddTransaction() {
         ))}
       </div>
 
-      {/* Category */}
+      {/* Category — context-aware */}
       <div className="px-5 mb-4">
-        <p className="text-sm font-semibold mb-3">Category</p>
-        <div className="grid grid-cols-4 gap-2">
-          {CATEGORIES.map((cat) => (
+        <p className="text-sm font-semibold mb-3">
+          {type === "income" ? "Income Source" : "Category"}
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {currentDisplay.map(({ category: cat, label, emoji }) => (
             <button
               key={cat}
               onClick={() => setCategory(cat)}
-              className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border-2 transition-all active:scale-95 ${
+              className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all active:scale-95 ${
                 category === cat
                   ? "border-primary bg-primary/5"
                   : "border-transparent bg-card hover:border-border"
               }`}
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${CATEGORY_COLORS[cat]}`}>
-                <span>{CATEGORY_EMOJI[cat]}</span>
+                <span>{emoji}</span>
               </div>
-              <span className="text-xs font-medium text-center leading-tight">{cat}</span>
+              <span className="text-xs font-medium text-center leading-tight">{label}</span>
             </button>
           ))}
         </div>
@@ -176,7 +220,7 @@ export function AddTransaction() {
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add a note (optional)..."
+            placeholder={type === "income" ? "Who sent it or reason (optional)..." : "Add a note (optional)..."}
             rows={2}
             className="w-full px-4 py-3 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
           />

@@ -24,6 +24,7 @@ interface TransactionContextType {
   transactions: Transaction[];
   dataReady: boolean;
   addTransaction: (transaction: Omit<Transaction, "id">) => void;
+  updateTransaction: (id: string, updates: Omit<Transaction, "id" | "type">) => void;
   deleteTransaction: (id: string) => void;
   balance: number;
   monthlySpending: number;
@@ -189,6 +190,39 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const updateTransaction = (id: string, updates: Omit<Transaction, "id" | "type">) => {
+    if (mode === "cloud" && userId) {
+      const previous = transactions.find((t) => t.id === id);
+      if (!previous) return;
+
+      setTransactions((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+      );
+
+      void (async () => {
+        const supa = getSupabase();
+        if (!supa) return;
+        const { error } = await supa
+          .from("transactions")
+          .update({
+            amount: updates.amount,
+            category: updates.category,
+            notes: updates.notes,
+            date: updates.date,
+          })
+          .eq("id", id)
+          .eq("user_id", userId);
+        if (error) {
+          console.error("Update transaction failed:", error.message);
+          setTransactions((prev) => prev.map((t) => (t.id === id ? previous : t)));
+        }
+      })();
+      return;
+    }
+
+    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+  };
+
   const totalIncome = transactions
     .filter((t) => t.type === "income")
     .reduce((acc, t) => acc + t.amount, 0);
@@ -217,6 +251,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
         transactions,
         dataReady,
         addTransaction,
+        updateTransaction,
         deleteTransaction,
         balance,
         monthlySpending,

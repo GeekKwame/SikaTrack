@@ -18,6 +18,7 @@ Mobile Money (MoMo) expense tracker for Ghana, built with React + Vite.
 - Frontend: React, TypeScript, Vite
 - Charts/UI: Recharts, Lucide, Sonner
 - Backend/Database (cloud mode): Supabase (PostgreSQL + Auth + RLS)
+- AI assistant: Google Gemini API (for Ask Sika)
 
 ## Getting Started
 
@@ -46,6 +47,17 @@ VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 
 You can copy `.env.example` and rename it to `.env.local`.
 
+### 2b) Enable Ask Sika AI (Gemini)
+
+Set your Gemini API key as a server environment variable:
+
+```env
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+```
+
+Create a key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+For Vercel, add `GEMINI_API_KEY` in Project Settings -> Environment Variables.
+
 ### 3) Start development server
 
 ```bash
@@ -64,6 +76,7 @@ npm run preview
 - Vercel: `vercel.json` is included for SPA routing fallback.
 - Netlify: `public/_redirects` is included for SPA routing fallback.
 - Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your hosting provider environment variables for cloud mode.
+- Set `GEMINI_API_KEY` in your hosting provider environment variables to enable Ask Sika AI in production.
 
 ## Project Notes
 

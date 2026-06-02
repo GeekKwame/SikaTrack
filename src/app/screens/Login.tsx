@@ -1,20 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useAuth } from "../context/AuthContext";
 import { Logo } from "../components/Logo";
 
 const STORAGE_USER = "sikatrack_user";
 
 export function Login() {
   const navigate = useNavigate();
-  const { mode, ready, session, signInWithEmail } = useAuth();
 
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [cloudLoading, setCloudLoading] = useState(false);
 
   let localUser: { name?: string; pin?: string } | null = null;
   try {
@@ -23,26 +17,6 @@ export function Login() {
   } catch {
     localUser = null;
   }
-
-  useEffect(() => {
-    if (!ready) return;
-    if (mode === "cloud" && session?.user) {
-      navigate("/", { replace: true });
-    }
-  }, [mode, session, ready, navigate]);
-
-  const handleCloudLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setCloudLoading(true);
-    const { error: err } = await signInWithEmail(email.trim(), password);
-    setCloudLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    navigate("/", { replace: true });
-  };
 
   const handleLocalLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,79 +54,6 @@ export function Login() {
   };
 
   const pinKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
-
-  if (mode === "cloud") {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-between bg-background px-6 py-12">
-        <div className="flex flex-col items-center gap-3 pt-8">
-          <Logo size={72} />
-          <div>
-            <p className="text-sm text-muted-foreground text-center mt-1">Your MoMo Expense Tracker</p>
-          </div>
-        </div>
-
-        <form
-          onSubmit={handleCloudLogin}
-          className="w-full max-w-xs flex flex-col gap-4 flex-1 justify-center"
-        >
-          <h2 className="text-xl font-semibold text-center">Sign in</h2>
-          <p className="text-sm text-muted-foreground text-center -mt-2">
-            Use the email and password you registered with
-          </p>
-          <div>
-            <label htmlFor="login-email" className="text-xs font-medium text-muted-foreground block mb-1">
-              Email
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="login-password" className="text-xs font-medium text-muted-foreground block mb-1">
-              Password
-            </label>
-            <input
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          {error && <p className="text-destructive text-sm font-medium text-center">{error}</p>}
-          <button
-            type="submit"
-            disabled={cloudLoading}
-            className="w-full py-4 rounded-2xl font-semibold text-primary-foreground disabled:opacity-60"
-            style={{ background: "var(--gradient-primary)" }}
-          >
-            {cloudLoading ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
-
-        <div className="w-full max-w-xs pb-4 space-y-3">
-          <button
-            type="button"
-            onClick={() => navigate("/signup")}
-            className="w-full text-sm text-primary font-medium underline-offset-2 hover:underline"
-          >
-            Create account →
-          </button>
-          <p className="text-xs text-muted-foreground text-center">SikaTrack · Built for Ghana 🇬🇭</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-between bg-background px-6 py-12">

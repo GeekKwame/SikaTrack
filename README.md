@@ -4,21 +4,21 @@ Mobile Money (MoMo) expense tracker for Ghana, built with React + Vite.
 
 ## Features
 
-- User authentication:
-  - Offline mode: local PIN-based access
-  - Cloud mode: Supabase email/password auth
+- Local PIN-based access — data stays on your device
 - Add and manage transactions
 - Category tracking (Food, Transport, Bills, etc.)
 - Monthly summary and insights
 - Budgets and savings goals
+- Backup & restore via JSON export
 - PWA-ready for mobile and web install experience
+- Ask Sika AI assistant (optional, via Gemini)
 
 ## Tech Stack
 
 - Frontend: React, TypeScript, Vite
 - Charts/UI: Recharts, Lucide, Sonner
-- Backend/Database (cloud mode): Supabase (PostgreSQL + Auth + RLS)
-- AI assistant: Google Gemini API (for Ask Sika)
+- Storage: `localStorage` on the device
+- AI assistant: Google Gemini API (serverless on Vercel)
 
 ## Getting Started
 
@@ -28,26 +28,7 @@ Mobile Money (MoMo) expense tracker for Ghana, built with React + Vite.
 npm install
 ```
 
-### 2) Choose your mode
-
-#### Option A: Offline mode (no backend needed)
-
-Run the app without any environment variables. Data is stored on the device via `localStorage`.
-
-#### Option B: Cloud mode (recommended for production)
-
-1. Create a Supabase project.
-2. Run the SQL in `supabase/migrations/001_sikatrack_schema.sql` in the Supabase SQL Editor.
-3. Create `.env.local` in the project root:
-
-```env
-VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-```
-
-You can copy `.env.example` and rename it to `.env.local`.
-
-### 2b) Enable Ask Sika AI (Gemini)
+### 2) Enable Ask Sika AI (optional)
 
 Set your Gemini API key as a server environment variable:
 
@@ -56,13 +37,31 @@ GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 ```
 
 Create a key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-For Vercel, add `GEMINI_API_KEY` in Project Settings -> Environment Variables.
+For Vercel, add `GEMINI_API_KEY` in Project Settings → Environment Variables.
+
+Copy `.env.example` to `.env.local` for local API testing.
 
 ### 3) Start development server
 
 ```bash
 npm run dev
 ```
+
+The app runs at [http://localhost:5173](http://localhost:5173).
+
+#### Ask Sika AI in local dev
+
+`/api/ask` is a Vercel serverless function. To test Ask Sika locally, run **two terminals** from the `SikaTrack` folder:
+
+```bash
+# Terminal 1 — API on port 3000
+npm run dev:vercel
+
+# Terminal 2 — Vite proxies /api to port 3000
+npm run dev
+```
+
+Set `GEMINI_API_KEY` in `.env.local` (or export it) before running `dev:vercel`.
 
 ## Production Build
 
@@ -71,15 +70,19 @@ npm run build
 npm run preview
 ```
 
-## Deployment
+## Deployment (Vercel)
 
-- Vercel: `vercel.json` is included for SPA routing fallback.
-- Netlify: `public/_redirects` is included for SPA routing fallback.
-- Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your hosting provider environment variables for cloud mode.
-- Set `GEMINI_API_KEY` in your hosting provider environment variables to enable Ask Sika AI in production.
+This app lives in a monorepo. In Vercel, set **Root Directory** to `SikaTrack`.
+
+| Variable | When | Purpose |
+|----------|------|---------|
+| `GEMINI_API_KEY` | Runtime | Ask Sika AI (optional) |
+
+`vercel.json` includes SPA routing, build settings, and security headers. Netlify: use `public/_redirects` for SPA fallback.
+
+Optional: `ALLOWED_ORIGINS` (comma-separated) for extra CORS origins on `/api/ask` when using a custom domain.
 
 ## Project Notes
 
-- If Supabase env vars are missing, the app automatically falls back to offline local mode.
-- Cloud mode uses Row Level Security policies in Supabase to isolate user data.
-- This repo has been cleaned of unused generated UI files for easier maintenance.
+- All financial data is stored in the browser on the device. Use **Profile → Backup** before switching devices or clearing browser data.
+- Ask Sika works without `GEMINI_API_KEY` but will return a friendly “not configured” message.

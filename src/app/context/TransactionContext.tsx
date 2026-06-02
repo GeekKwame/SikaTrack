@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "./AuthContext";
 
 export type Category =
@@ -40,42 +39,10 @@ function generateLocalId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-function rowToTransaction(row: {
-  id: string;
-  amount: number | string;
-  category: string;
-  notes: string | null;
-  date: string;
-  type: string;
-}): Transaction | null {
-  const type = row.type === "income" ? "income" : "expense";
-  const category = row.category as Category;
-  const allowed: Category[] = [
-    "Food",
-    "Transport",
-    "Bills",
-    "Entertainment",
-    "MoMo Transfer",
-    "Savings",
-    "Other",
-  ];
-  if (!allowed.includes(category)) return null;
-  return {
-    id: row.id,
-    amount: typeof row.amount === "number" ? row.amount : parseFloat(row.amount),
-    category,
-    notes: row.notes ?? "",
-    date: row.date,
-    type,
-  };
-}
-
 export function TransactionProvider({ children }: { children: ReactNode }) {
-  const { mode, ready: authReady, session } = useAuth();
+  const { ready: authReady } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [dataReady, setDataReady] = useState(false);
-
-  const userId = mode === "cloud" ? session?.user?.id : "local";
 
   const loadLocal = useCallback(() => {
     const stored = localStorage.getItem(STORAGE_TRANSACTIONS);
@@ -96,130 +63,27 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     setDataReady(true);
   }, []);
 
-  const loadCloud = useCallback(async (uid: string) => {
-    const supa = getSupabase();
-    if (!supa) {
-      setDataReady(true);
-      return;
-    }
-    const { data, error } = await supa
-      .from("transactions")
-      .select("id, amount, category, notes, date, type")
-      .eq("user_id", uid)
-      .order("date", { ascending: false });
-
-    if (error) {
-      console.error("Failed to load transactions:", error.message);
-      setTransactions([]);
-      setDataReady(true);
-      return;
-    }
-
-    const list: Transaction[] = [];
-    for (const row of data ?? []) {
-      const t = rowToTransaction(row as Parameters<typeof rowToTransaction>[0]);
-      if (t) list.push(t);
-    }
-    setTransactions(list);
-    setDataReady(true);
-  }, []);
-
   useEffect(() => {
     if (!authReady) return;
     setDataReady(false);
-    if (mode === "local") {
-      loadLocal();
-      return;
-    }
-    if (!userId) {
-      setTransactions([]);
-      setDataReady(true);
-      return;
-    }
-    void loadCloud(userId);
-  }, [authReady, mode, userId, loadLocal, loadCloud]);
+    loadLocal();
+  }, [authReady, loadLocal]);
 
   useEffect(() => {
-    if (mode !== "local" || !dataReady) return;
+    if (!dataReady) return;
     localStorage.setItem(STORAGE_TRANSACTIONS, JSON.stringify(transactions));
-  }, [transactions, mode, dataReady]);
+  }, [transactions, dataReady]);
 
   const addTransaction = (transaction: Omit<Transaction, "id">) => {
-    if (mode === "cloud" && userId) {
-      const id = crypto.randomUUID();
-      const newTx: Transaction = { ...transaction, id };
-      setTransactions((prev) => [newTx, ...prev]);
-      void (async () => {
-        const supa = getSupabase();
-        if (!supa) return;
-        const { error } = await supa.from("transactions").insert({
-          id,
-          user_id: userId,
-          amount: transaction.amount,
-          category: transaction.category,
-          notes: transaction.notes,
-          date: transaction.date,
-          type: transaction.type,
-        });
-        if (error) {
-          console.error("Insert transaction failed:", error.message);
-          setTransactions((prev) => prev.filter((t) => t.id !== id));
-        }
-      })();
-      return;
-    }
-
     const newTransaction: Transaction = { ...transaction, id: generateLocalId() };
     setTransactions((prev) => [newTransaction, ...prev]);
   };
 
   const deleteTransaction = (id: string) => {
-    if (mode === "cloud" && userId) {
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
-      void (async () => {
-        const supa = getSupabase();
-        if (!supa) return;
-        const { error } = await supa.from("transactions").delete().eq("id", id).eq("user_id", userId);
-        if (error) {
-          console.error("Delete transaction failed:", error.message);
-          void loadCloud(userId);
-        }
-      })();
-      return;
-    }
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
   const updateTransaction = (id: string, updates: Omit<Transaction, "id" | "type">) => {
-    if (mode === "cloud" && userId) {
-      const previous = transactions.find((t) => t.id === id);
-      if (!previous) return;
-
-      setTransactions((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
-      );
-
-      void (async () => {
-        const supa = getSupabase();
-        if (!supa) return;
-        const { error } = await supa
-          .from("transactions")
-          .update({
-            amount: updates.amount,
-            category: updates.category,
-            notes: updates.notes,
-            date: updates.date,
-          })
-          .eq("id", id)
-          .eq("user_id", userId);
-        if (error) {
-          console.error("Update transaction failed:", error.message);
-          setTransactions((prev) => prev.map((t) => (t.id === id ? previous : t)));
-        }
-      })();
-      return;
-    }
-
     setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
   };
 

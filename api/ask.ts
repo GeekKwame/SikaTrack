@@ -73,15 +73,37 @@ async function callGemini(prompt: string, apiKey: string, attempt = 0): Promise<
   return text;
 }
 
-// ── Request handler ───────────────────────────────────────────────────────────
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS — allow same-origin and local dev
-  const origin = req.headers.origin ?? "";
-  const allowed = [
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "",
+function getAllowedOrigins(): string[] {
+  const origins = new Set<string>([
     "http://localhost:5173",
     "http://localhost:4173",
-  ].filter(Boolean);
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:4173",
+  ]);
+
+  if (process.env.VERCEL_URL) {
+    origins.add(`https://${process.env.VERCEL_URL}`);
+  }
+
+  const productionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (productionUrl) {
+    origins.add(productionUrl.startsWith("http") ? productionUrl : `https://${productionUrl}`);
+  }
+
+  if (process.env.ALLOWED_ORIGINS) {
+    for (const entry of process.env.ALLOWED_ORIGINS.split(",")) {
+      const trimmed = entry.trim();
+      if (trimmed) origins.add(trimmed);
+    }
+  }
+
+  return [...origins];
+}
+
+// ── Request handler ───────────────────────────────────────────────────────────
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const origin = req.headers.origin ?? "";
+  const allowed = getAllowedOrigins();
 
   if (allowed.includes(origin) || !origin) {
     res.setHeader("Access-Control-Allow-Origin", origin || "*");

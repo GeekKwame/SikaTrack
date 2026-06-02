@@ -3,13 +3,16 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "vite build",
     "dev": "vite",
+    "dev:vercel": "vercel dev --listen 3000",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.102.1",
     "canvas-confetti": "1.9.4",
     "lucide-react": "0.487.0",
     "react": "^18.3.1",

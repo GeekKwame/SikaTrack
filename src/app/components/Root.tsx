@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext";
 const STORAGE_USER = "sikatrack_user";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { ready, mode, session } = useAuth();
+  const { ready } = useAuth();
 
   if (!ready) {
     return (
@@ -26,9 +26,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (mode === "cloud") {
-    if (!session?.user) return <Navigate to="/login" replace />;
-  } else if (!localStorage.getItem(STORAGE_USER)) {
+  if (!localStorage.getItem(STORAGE_USER)) {
     return <Navigate to="/login" replace />;
   }
 

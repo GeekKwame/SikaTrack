@@ -5,7 +5,7 @@ import { useTransactions, Category } from "../context/TransactionContext";
 import { useBudgets } from "../context/BudgetContext";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
-import { Moon, Sun, ArrowUpRight, ArrowDownRight, Plus, ChevronRight, AlertTriangle, Target, AlertCircle, Cloud, Smartphone, X } from "lucide-react";
+import { Moon, Sun, ArrowUpRight, ArrowDownRight, Plus, ChevronRight, AlertTriangle, Target, AlertCircle, Smartphone, X } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { CATEGORY_HEX, CATEGORY_EMOJI } from "../components/CategoryIcon";
 
@@ -29,7 +29,7 @@ export function Dashboard() {
   const { transactions, dataReady, balance, monthlySpending, totalIncome, totalExpenses } = useTransactions();
   const { budgets } = useBudgets();
   const { theme, toggleTheme } = useTheme();
-  const { user: authUser, mode } = useAuth();
+  const { user: authUser } = useAuth();
   const navigate = useNavigate();
   const [showOpeningPrompt, setShowOpeningPrompt] = useState(false);
   const [showModeHint, setShowModeHint] = useState(() => {
@@ -176,16 +176,14 @@ export function Dashboard() {
               <X size={16} />
             </button>
             <div className="mt-0.5 rounded-full bg-blue-100 dark:bg-blue-900 p-1.5 text-blue-600 dark:text-blue-400">
-              {mode === "cloud" ? <Cloud size={16} /> : <Smartphone size={16} />}
+              <Smartphone size={16} />
             </div>
             <div className="pr-4">
               <p className="font-semibold text-sm text-blue-900 dark:text-blue-100">
-                {mode === "cloud" ? "Cloud Sync Active ☁️" : "Offline Mode 📱"}
+                On-device storage 📱
               </p>
               <p className="text-xs text-blue-800/80 dark:text-blue-200/80 mt-0.5 leading-relaxed">
-                {mode === "cloud"
-                  ? "Your data is safely backed up to the cloud and synced across devices."
-                  : "Your data is stored securely on this device only. Set up Supabase to enable cloud sync."}
+                Your data stays on this device. Use Profile → Backup to save a copy you can restore later.
               </p>
             </div>
           </div>

@@ -1,64 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
 
 const STORAGE_USER = "sikatrack_user";
 
 export function Signup() {
   const navigate = useNavigate();
-  const { mode, ready, session, signUpWithEmail } = useAuth();
 
   const [step, setStep] = useState<"name" | "pin" | "confirm">("name");
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [error, setError] = useState("");
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [cloudLoading, setCloudLoading] = useState(false);
-
-  useEffect(() => {
-    if (!ready) return;
-    if (mode === "cloud" && session?.user) {
-      navigate("/", { replace: true });
-    }
-  }, [mode, session, ready, navigate]);
-
-  const handleCloudSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if (name.trim().length < 2) {
-      setError("Please enter your name");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-    setCloudLoading(true);
-    const { error: err, needsEmailConfirmation } = await signUpWithEmail(
-      email.trim(),
-      password,
-      name.trim()
-    );
-    setCloudLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    if (needsEmailConfirmation) {
-      toast.message("Confirm your email", {
-        description: "We sent a link to your inbox. After confirming, sign in here.",
-      });
-      navigate("/login");
-      return;
-    }
-    toast.success("Welcome to SikaTrack!");
-    navigate("/", { replace: true });
-  };
 
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,101 +58,6 @@ export function Signup() {
 
   const pinKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
   const currentPin = step === "pin" ? pin : confirmPin;
-
-  if (mode === "cloud") {
-    return (
-      <div className="min-h-screen flex flex-col bg-background px-6 py-12">
-        <button
-          type="button"
-          onClick={() => navigate("/login")}
-          className="flex items-center gap-2 text-muted-foreground mb-8 self-start"
-        >
-          <ArrowLeft size={20} />
-          <span className="text-sm font-medium">Back</span>
-        </button>
-
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <div
-            className="rounded-2xl flex items-center justify-center shadow-lg"
-            style={{ width: 64, height: 64, background: "var(--gradient-primary)" }}
-          >
-            <span className="text-white font-bold text-3xl">₵</span>
-          </div>
-          <h1 className="text-2xl font-bold">Create account</h1>
-          <p className="text-sm text-muted-foreground text-center">Cloud sync with your free Supabase project</p>
-        </div>
-
-        <form onSubmit={handleCloudSignup} className="flex flex-col gap-4 w-full max-w-xs mx-auto">
-          <div>
-            <label htmlFor="su-name" className="text-xs font-medium text-muted-foreground block mb-1">
-              Your name
-            </label>
-            <input
-              id="su-name"
-              type="text"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setError("");
-              }}
-              placeholder="e.g. Kofi Mensah"
-              className="w-full px-4 py-3 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="su-email" className="text-xs font-medium text-muted-foreground block mb-1">
-              Email
-            </label>
-            <input
-              id="su-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError("");
-              }}
-              placeholder="you@example.com"
-              className="w-full px-4 py-3 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="su-password" className="text-xs font-medium text-muted-foreground block mb-1">
-              Password
-            </label>
-            <input
-              id="su-password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError("");
-              }}
-              placeholder="At least 6 characters"
-              className="w-full px-4 py-3 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-              minLength={6}
-            />
-          </div>
-          {error && <p className="text-destructive text-sm">{error}</p>}
-          <button
-            type="submit"
-            disabled={cloudLoading}
-            className="w-full py-4 rounded-2xl font-semibold text-primary-foreground disabled:opacity-60"
-            style={{ background: "var(--gradient-primary)" }}
-          >
-            {cloudLoading ? "Creating…" : "Create account"}
-          </button>
-        </form>
-
-        <p className="text-xs text-muted-foreground text-center mt-auto pt-8">SikaTrack · Built for Ghana 🇬🇭</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background px-6 py-12">
